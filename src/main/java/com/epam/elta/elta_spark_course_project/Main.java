@@ -37,7 +37,8 @@ public class Main {
                         Encoders.bean(AggregatedEventsResult.class),
                         GroupStateTimeout.NoTimeout())
                 .withColumn("lineString", calculateLineString())
-                .withColumn("bearing", calculateBearing());
+                .withColumn("bearing", calculateBearing())
+                .withColumn("distance", calculateDistance());
 
         ds.writeStream()
                 .format("console")
@@ -133,5 +134,26 @@ public class Main {
         Column xCol = cos(lat1Col).multiply(sin(lat2Col)).minus(sin(lat1Col).multiply(cos(lat2Col)).multiply(cos(lon2Col.minus(lon1Col))));
         Column thetaCol = atan2(yCol, xCol);
         return pmod(thetaCol.multiply(180).divide(lit(Math.PI)).plus(360), lit(360));
+    }
+
+    private static Column calculateDistance() {
+        Column lat1RadCol = element_at(col("events.lat"), 1).multiply(Math.PI / 180);
+        Column lat2RadCol = element_at(col("events.lat"), -1).multiply(Math.PI / 180);
+        Column deltaLatCol = element_at(col("events.lat"), -1)
+                .minus(element_at(col("events.lat"), 1))
+                .multiply(Math.PI / 180);
+        Column deltaLonCol = element_at(col("events.lat"), -1)
+                .minus(element_at(col("events.lat"), 1))
+                .multiply(Math.PI / 180);
+
+        Column a = pow(sin(deltaLatCol.divide(2)), lit(2))
+                .plus(cos(lat1RadCol).multiply(cos(lat2RadCol)).multiply(pow(sin(deltaLonCol.divide(2)), lit(2))));
+
+        Column c = lit(2).multiply(atan2(sqrt(a), sqrt(lit(1).minus(a))));
+
+        int earthRadiusMiters = 6371000;
+
+        Column distance = lit(earthRadiusMiters).multiply(c);
+        return round(distance).divide(1000);
     }
 }
