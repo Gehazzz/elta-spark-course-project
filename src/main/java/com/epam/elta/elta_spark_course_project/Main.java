@@ -21,7 +21,6 @@ public class Main {
         SparkSession spark = SparkSession.builder()
                 .appName("spark streaming")
                 .config("spark.master", "local")
-                //.config("spark.sql.warehouse.dir", "file:///app/")
                 .getOrCreate();
 
         spark.sparkContext().setLogLevel("ERROR");
@@ -37,7 +36,8 @@ public class Main {
                         Encoders.bean(EventState.class),
                         Encoders.bean(AggregatedEventsResult.class),
                         GroupStateTimeout.NoTimeout())
-                .withColumn("lineString", calculateLineString());
+                .withColumn("lineString", calculateLineString())
+                .withColumn("bearing", calculateBearing());
 
         ds.writeStream()
                 .format("console")
@@ -121,5 +121,17 @@ public class Main {
 
     private static Column calculateLineString() {
         return concat_ws(",", transform(col("events"), eventCol -> concat(eventCol.getField("lon"), lit(" "), eventCol.getField("lat"))));
+    }
+
+    private static Column calculateBearing() {
+        Column lat1Col = element_at(col("events.lat"), 1);
+        Column lat2Col = element_at(col("events.lat"), -1);
+        Column lon1Col = element_at(col("events.lon"), 1);
+        Column lon2Col = element_at(col("events.lon"), -1);
+
+        Column yCol = sin(lon2Col.minus(lon1Col)).multiply(cos(lat2Col));
+        Column xCol = cos(lat1Col).multiply(sin(lat2Col)).minus(sin(lat1Col).multiply(cos(lat2Col)).multiply(cos(lon2Col.minus(lon1Col))));
+        Column thetaCol = atan2(yCol, xCol);
+        return pmod(thetaCol.multiply(180).divide(lit(Math.PI)).plus(360), lit(360));
     }
 }
