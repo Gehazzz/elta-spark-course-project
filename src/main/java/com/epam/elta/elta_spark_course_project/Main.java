@@ -3,9 +3,7 @@ package com.epam.elta.elta_spark_course_project;
 import lombok.SneakyThrows;
 import org.apache.spark.api.java.function.FlatMapGroupsWithStateFunction;
 import org.apache.spark.api.java.function.MapFunction;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.streaming.GroupStateTimeout;
 import org.apache.spark.sql.streaming.OutputMode;
 
@@ -14,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.spark.sql.functions.*;
 
 public class Main {
     @SneakyThrows
@@ -26,7 +26,7 @@ public class Main {
 
         spark.sparkContext().setLogLevel("ERROR");
 
-        Dataset<AggregatedEventsResult> ds = spark.readStream()
+        Dataset<Row> ds = spark.readStream()
                 .schema(Encoders.bean(Event.class).schema())
                 .json("src/main/resources/data")
                 .as(Encoders.bean(Event.class))
@@ -36,7 +36,8 @@ public class Main {
                         OutputMode.Update(),
                         Encoders.bean(EventState.class),
                         Encoders.bean(AggregatedEventsResult.class),
-                        GroupStateTimeout.NoTimeout());
+                        GroupStateTimeout.NoTimeout())
+                .withColumn("lineString", calculateLineString());
 
         ds.writeStream()
                 .format("console")
@@ -116,5 +117,9 @@ public class Main {
             groupState.update(eventState);
             return results.iterator();
         };
+    }
+
+    private static Column calculateLineString() {
+        return concat_ws(",", transform(col("events"), eventCol -> concat(eventCol.getField("lon"), lit(" "), eventCol.getField("lat"))));
     }
 }
