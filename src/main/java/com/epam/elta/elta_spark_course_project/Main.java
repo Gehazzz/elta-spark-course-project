@@ -38,7 +38,8 @@ public class Main {
                         GroupStateTimeout.NoTimeout())
                 .withColumn("lineString", calculateLineString())
                 .withColumn("bearing", calculateBearing())
-                .withColumn("distance", calculateDistance());
+                .withColumn("distance", calculateDistance())
+                .withColumn("velocity", calculateVelocity());
 
         ds.writeStream()
                 .format("console")
@@ -155,5 +156,12 @@ public class Main {
 
         Column distance = lit(earthRadiusMiters).multiply(c);
         return round(distance).divide(1000);
+    }
+
+    private static Column calculateVelocity() {
+        Column t1Col = element_at(col("events.eventTime"), 1);
+        Column t2Col = element_at(col("events.eventTime"), -1);
+        //Column velocityCol = col("distance").divide(unix_timestamp(t2Col).minus(unix_timestamp(t1Col))); m/s
+        return col("distance").divide(unix_timestamp(t2Col).minus(unix_timestamp(t1Col)).divide(60*60)); //km/h
     }
 }
