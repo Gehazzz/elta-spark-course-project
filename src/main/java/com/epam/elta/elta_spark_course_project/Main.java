@@ -20,8 +20,7 @@ public class Main {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .appName("spark streaming")
-                .config("spark.master", "local")
-                //.config("spark.sql.warehouse.dir", "file:///app/")
+                .config("spark.master", "local[*]")
                 .getOrCreate();
 
         spark.sparkContext().setLogLevel("ERROR");
