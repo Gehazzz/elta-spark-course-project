@@ -143,8 +143,8 @@ public class Main {
         Column deltaLatCol = element_at(col("events.lat"), -1)
                 .minus(element_at(col("events.lat"), 1))
                 .multiply(Math.PI / 180);
-        Column deltaLonCol = element_at(col("events.lat"), -1)
-                .minus(element_at(col("events.lat"), 1))
+        Column deltaLonCol = element_at(col("events.lon"), -1)
+                .minus(element_at(col("events.lon"), 1))
                 .multiply(Math.PI / 180);
 
         Column a = pow(sin(deltaLatCol.divide(2)), lit(2))
