@@ -8,9 +8,7 @@ import org.apache.spark.sql.streaming.GroupStateTimeout;
 import org.apache.spark.sql.streaming.OutputMode;
 
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.spark.sql.functions.*;
@@ -39,7 +37,9 @@ public class Main {
                 .withColumn("lineString", calculateLineString())
                 .withColumn("bearing", calculateBearing())
                 .withColumn("distance", calculateDistance())
-                .withColumn("velocity", calculateVelocity());
+                .withColumn("velocity", calculateVelocity())
+                //bug in map function, we have in result event 1 [{2022-06-23 00:02:34, 3, 0.132842745196235, 0.497244459218679, 2f6ca4e3-8fa9-4cd7-bcc9-67cec7db2a73}]
+                .na().fill(Map.of("velocity", 0));
 
         ds.writeStream()
                 .format("console")
