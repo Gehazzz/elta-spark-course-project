@@ -188,6 +188,8 @@ public class Main {
         int earthRadiusMiters = 6371000;
 
         Column distance = round(lit(earthRadiusMiters)).multiply(c).divide(1000);
-        return struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").plus(distance).as("distance"));
+
+        return when(acc.getField("lat").equalTo(0.0).or(acc.getField("lon").equalTo(0.0)), struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").as("distance")))
+                .otherwise(struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").plus(distance).as("distance")));
     }
 }
