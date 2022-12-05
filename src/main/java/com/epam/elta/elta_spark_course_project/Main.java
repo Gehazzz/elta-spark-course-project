@@ -170,13 +170,13 @@ public class Main {
         return aggregate(col("events"), struct(lit(0.0).as("lat"), lit(0.0).as("lon"), lit(0.0).as("distance")), Main::aggregateEventsPath).getField("distance");
     }
 
-    private static Column aggregateEventsPath(Column acc, Column event2) {
+    private static Column aggregateEventsPath(Column acc, Column event) {
         Column lat1RadCol = acc.getField("lat").multiply(Math.PI / 180);
-        Column lat2RadCol = event2.getField("lat").multiply(Math.PI / 180);
-        Column deltaLatCol = event2.getField("lat")
+        Column lat2RadCol = event.getField("lat").multiply(Math.PI / 180);
+        Column deltaLatCol = event.getField("lat")
                 .minus(acc.getField("lat"))
                 .multiply(Math.PI / 180);
-        Column deltaLonCol = event2.getField("lon")
+        Column deltaLonCol = event.getField("lon")
                 .minus(acc.getField("lon"))
                 .multiply(Math.PI / 180);
 
@@ -189,7 +189,7 @@ public class Main {
 
         Column distance = round(lit(earthRadiusMiters)).multiply(c).divide(1000);
 
-        return when(acc.getField("lat").equalTo(0.0).or(acc.getField("lon").equalTo(0.0)), struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").as("distance")))
-                .otherwise(struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").plus(distance).as("distance")));
+        return when(acc.getField("lat").equalTo(0.0).or(acc.getField("lon").equalTo(0.0)), struct(event.getField("lat").as("lat"), event.getField("lon").as("lon"), acc.getField("distance").as("distance")))
+                .otherwise(struct(event.getField("lat").as("lat"), event.getField("lon").as("lon"), acc.getField("distance").plus(distance).as("distance")));
     }
 }
