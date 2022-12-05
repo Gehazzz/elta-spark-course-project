@@ -39,7 +39,8 @@ public class Main {
                 .withColumn("lineString", calculateLineString())
                 .withColumn("bearing", calculateBearing())
                 .withColumn("distance", calculateDistance())
-                .withColumn("velocity", calculateVelocity());
+                .withColumn("velocity", calculateVelocity())
+                .withColumn("pathDistance", calculatePathDistance());
 
         ds.writeStream()
                 .format("console")
@@ -166,17 +167,17 @@ public class Main {
     }
 
     private static Column calculatePathDistance() {
-
+        return aggregate(col("events"), struct(lit(0.0).as("lat"), lit(0.0).as("lon"), lit(0.0).as("distance")), Main::aggregateEventsPath).getField("distance");
     }
 
-    private static Column aggregateEventsPath(Column event1, Column event2) {
-        Column lat1RadCol = element_at(col("events.lat"), 1).multiply(Math.PI / 180);
-        Column lat2RadCol = element_at(col("events.lat"), -1).multiply(Math.PI / 180);
-        Column deltaLatCol = element_at(col("events.lat"), -1)
-                .minus(element_at(col("events.lat"), 1))
+    private static Column aggregateEventsPath(Column acc, Column event2) {
+        Column lat1RadCol = acc.getField("lat").multiply(Math.PI / 180);
+        Column lat2RadCol = event2.getField("lat").multiply(Math.PI / 180);
+        Column deltaLatCol = event2.getField("lat")
+                .minus(acc.getField("lat"))
                 .multiply(Math.PI / 180);
-        Column deltaLonCol = element_at(col("events.lon"), -1)
-                .minus(element_at(col("events.lon"), 1))
+        Column deltaLonCol = event2.getField("lon")
+                .minus(acc.getField("lon"))
                 .multiply(Math.PI / 180);
 
         Column a = pow(sin(deltaLatCol.divide(2)), lit(2))
@@ -186,7 +187,7 @@ public class Main {
 
         int earthRadiusMiters = 6371000;
 
-        Column distance = lit(earthRadiusMiters).multiply(c);
-        return round(distance).divide(1000);
+        Column distance = round(lit(earthRadiusMiters)).multiply(c).divide(1000);
+        return struct(event2.getField("lat").as("lat"), event2.getField("lon").as("lon"), acc.getField("distance").plus(distance).as("distance"));
     }
 }
