@@ -143,8 +143,8 @@ public class Main {
         Column deltaLatCol = element_at(col("events.lat"), -1)
                 .minus(element_at(col("events.lat"), 1))
                 .multiply(Math.PI / 180);
-        Column deltaLonCol = element_at(col("events.lat"), -1)
-                .minus(element_at(col("events.lat"), 1))
+        Column deltaLonCol = element_at(col("events.lon"), -1)
+                .minus(element_at(col("events.lon"), 1))
                 .multiply(Math.PI / 180);
 
         Column a = pow(sin(deltaLatCol.divide(2)), lit(2))
@@ -162,6 +162,31 @@ public class Main {
         Column t1Col = element_at(col("events.eventTime"), 1);
         Column t2Col = element_at(col("events.eventTime"), -1);
         //Column velocityCol = col("distance").divide(unix_timestamp(t2Col).minus(unix_timestamp(t1Col))); m/s
-        return col("distance").divide(unix_timestamp(t2Col).minus(unix_timestamp(t1Col)).divide(60*60)); //km/h
+        return col("distance").divide(unix_timestamp(t2Col).minus(unix_timestamp(t1Col)).divide(60 * 60)); //km/h
+    }
+
+    private static Column calculatePathDistance() {
+
+    }
+
+    private static Column aggregateEventsPath(Column event1, Column event2) {
+        Column lat1RadCol = element_at(col("events.lat"), 1).multiply(Math.PI / 180);
+        Column lat2RadCol = element_at(col("events.lat"), -1).multiply(Math.PI / 180);
+        Column deltaLatCol = element_at(col("events.lat"), -1)
+                .minus(element_at(col("events.lat"), 1))
+                .multiply(Math.PI / 180);
+        Column deltaLonCol = element_at(col("events.lon"), -1)
+                .minus(element_at(col("events.lon"), 1))
+                .multiply(Math.PI / 180);
+
+        Column a = pow(sin(deltaLatCol.divide(2)), lit(2))
+                .plus(cos(lat1RadCol).multiply(cos(lat2RadCol)).multiply(pow(sin(deltaLonCol.divide(2)), lit(2))));
+
+        Column c = lit(2).multiply(atan2(sqrt(a), sqrt(lit(1).minus(a))));
+
+        int earthRadiusMiters = 6371000;
+
+        Column distance = lit(earthRadiusMiters).multiply(c);
+        return round(distance).divide(1000);
     }
 }
